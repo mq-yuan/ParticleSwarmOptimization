@@ -535,7 +535,6 @@ class PSOVisualizer:
         return fig
 
 # ==================== Main Execution and CLI ====================
-
 def run_specific_pso(pso_class: type, problem: BaseTSP, params: Dict[str, Any], enhancements: Optional[Dict[str, bool]] = None) -> TSPResult:
     """Helper to run a specific PSO variant"""
     if enhancements is None:
@@ -548,13 +547,15 @@ def main():
     parser = argparse.ArgumentParser(description="Run PSO algorithms for TSP.")
     parser.add_argument('--n_cities', type=int, default=20, help="Number of cities for the TSP problem.")
     parser.add_argument('--seed', type=int, default=None, help="Random seed for reproducibility.")
-    parser.add_argument('--pso_type', type=str, default='enhanced_all', 
-                        choices=['base_tsp', 'base_atsp', 'enhanced_all_tsp', 
-                                 'enhanced_ls_tsp', 'enhanced_adaptive_tsp', 'enhanced_chaos_tsp', 'all'],
+    parser.add_argument('--pso_type', type=str, default='enhanced_all_tsp', # 默认运行一个TSP变体以便快速测试
+                        choices=['base_tsp', 'base_atsp', 'enhanced_all_tsp',
+                                 'enhanced_ls_tsp', 'enhanced_adaptive_tsp', 'enhanced_chaos_tsp',
+                                 'enhanced_all_atsp', 'enhanced_ls_atsp', 'enhanced_adaptive_atsp',
+                                 'enhanced_chaos_atsp', 'all_tsp', 'all_atsp', 'all'], # 新增all_tsp和all_atsp选项
                         help="Type of PSO algorithm to run.")
     parser.add_argument('--max_iterations', type=int, default=200, help="Maximum number of iterations.")
     parser.add_argument('--n_particles', type=int, default=30, help="Number of particles.")
-    
+
     parser.add_argument('--show_plots', action=argparse.BooleanOptionalAction, default=True, help="Show visualization plots.")
     parser.add_argument('--save_plots', action=argparse.BooleanOptionalAction, default=False, help="Save visualization plots to files.")
     parser.add_argument('--output_dir', type=str, default='pso_plots', help="Directory to save plots.")
@@ -577,27 +578,22 @@ def main():
         print(f"Output Directory: {args.output_dir}")
     print("-" * 30)
 
-    # Create TSP/ATSP instances
-    # For simplicity, 'all' and specific enhanced versions will run on TSP.
-    # Base_atsp will run on ATSP.
     tsp_problem = TSP.create_random_instance(args.n_cities, seed=args.seed)
     atsp_problem = ATSP.create_random_instance(args.n_cities, seed=args.seed)
-    
+
     pso_params = {
         'n_particles': args.n_particles,
         'max_iterations': args.max_iterations,
         'seed': args.seed
     }
-    
-    results: Dict[str, TSPResult] = {}
-    plot_figs: Dict[str, plt.Figure] = {} # To store figures for saving/showing
 
-    # --- Define PSO configurations ---
+    results: Dict[str, TSPResult] = {}
+    plot_figs: Dict[str, plt.Figure] = {}
+
     pso_configs = {
         'base_tsp': {'class': BasePSO, 'problem': tsp_problem, 'enhancements': {}, 'name': 'Standard PSO (TSP)'},
-        'base_atsp': {'class': BasePSO, 'problem': atsp_problem, 'enhancements': {}, 'name': 'Standard PSO (ATSP)'},
-        'enhanced_all_tsp': {'class': EnhancedPSO, 'problem': tsp_problem, 
-                             'enhancements': {'enable_local_search': True, 'enable_adaptive_params': True, 'enable_chaos': True}, 
+        'enhanced_all_tsp': {'class': EnhancedPSO, 'problem': tsp_problem,
+                             'enhancements': {'enable_local_search': True, 'enable_adaptive_params': True, 'enable_chaos': True},
                              'name': 'Enhanced PSO (All Features, TSP)'},
         'enhanced_ls_tsp': {'class': EnhancedPSO, 'problem': tsp_problem,
                             'enhancements': {'enable_local_search': True, 'enable_adaptive_params': False, 'enable_chaos': False},
@@ -608,8 +604,10 @@ def main():
         'enhanced_chaos_tsp': {'class': EnhancedPSO, 'problem': tsp_problem,
                                'enhancements': {'enable_local_search': False, 'enable_adaptive_params': False, 'enable_chaos': True},
                                'name': 'Enhanced PSO (Chaos, TSP)'},
-        'enhanced_all_atsp': {'class': EnhancedPSO, 'problem': atsp_problem, 
-                             'enhancements': {'enable_local_search': True, 'enable_adaptive_params': True, 'enable_chaos': True}, 
+
+        'base_atsp': {'class': BasePSO, 'problem': atsp_problem, 'enhancements': {}, 'name': 'Standard PSO (ATSP)'},
+        'enhanced_all_atsp': {'class': EnhancedPSO, 'problem': atsp_problem,
+                             'enhancements': {'enable_local_search': True, 'enable_adaptive_params': True, 'enable_chaos': True},
                              'name': 'Enhanced PSO (All Features, ATSP)'},
         'enhanced_ls_atsp': {'class': EnhancedPSO, 'problem': atsp_problem,
                             'enhancements': {'enable_local_search': True, 'enable_adaptive_params': False, 'enable_chaos': False},
@@ -622,10 +620,13 @@ def main():
                                'name': 'Enhanced PSO (Chaos, ATSP)'},
     }
 
-    # --- Run selected PSO ---
     types_to_run = []
     if args.pso_type == 'all':
         types_to_run = list(pso_configs.keys())
+    elif args.pso_type == 'all_tsp':
+        types_to_run = [k for k in pso_configs if "TSP" in pso_configs[k]['name']]
+    elif args.pso_type == 'all_atsp':
+        types_to_run = [k for k in pso_configs if "ATSP" in pso_configs[k]['name']]
     elif args.pso_type in pso_configs:
         types_to_run = [args.pso_type]
     else:
@@ -635,7 +636,7 @@ def main():
     for pso_key in types_to_run:
         config = pso_configs[pso_key]
         print(f"\nRunning {config['name']}...")
-        result = run_specific_pso(config['class'], config['problem'], pso_params, config['enhancements'])
+        result = run_specific_pso(config['class'], config['problem'], pso_params, config.get('enhancements', {}))
         results[config['name']] = result
         print(f"  Best Distance: {result.best_distance:.2f}")
         print(f"  Computation Time: {result.computation_time:.2f}s")
@@ -643,44 +644,95 @@ def main():
         path_preview = result.best_path[:10] if result.best_path and len(result.best_path) > 10 else result.best_path
         print(f"  Best Path (preview): {path_preview}{'...' if path_preview and len(result.best_path) > 10 else ''}")
 
-        # Generate individual best path plot if coordinates exist
         if result.problem_coords is not None:
             path_fig_title = f"Best Path for {config['name']}"
             path_fig = PSOVisualizer.plot_best_path(result, title_prefix=path_fig_title)
             if path_fig:
-                 plot_figs[f"best_path_{pso_key}"] = path_fig
+                 plot_figs[f"best_path_{pso_key.replace(' ', '_')}"] = path_fig # 使用更安全的文件名
 
-
-    # --- Generate Comparison Visualizations ---
-    if len(results) > 0:
-        print("\nGenerating comparison visualizations...")
-        conv_fig = PSOVisualizer.plot_convergence(results, title="PSO Algorithm Convergence Comparison")
-        plot_figs["convergence_comparison"] = conv_fig
-
-        if len(results) > 1: # Performance comparison only makes sense for multiple results
-            perf_fig = PSOVisualizer.plot_performance_comparison(results)
-            plot_figs["performance_comparison"] = perf_fig
-    else:
+    # --- 修改后的可视化生成部分 ---
+    if not results:
         print("No results to visualize.")
+    else:
+        print("\nGenerating comparison visualizations...")
+
+        # 筛选TSP和ATSP的结果
+        results_tsp_only = {name: res for name, res in results.items() if "TSP)" in name}
+        results_atsp_only = {name: res for name, res in results.items() if "ATSP)" in name}
+
+        # 1. 仅 TSP 结果的比较图
+        if results_tsp_only:
+            print("\nGenerating comparison visualizations for TSP results only...")
+            if len(results_tsp_only) > 0:
+                conv_fig_tsp = PSOVisualizer.plot_convergence(results_tsp_only, title="PSO Convergence Comparison (TSP only)")
+                plot_figs["convergence_comparison_tsp_only"] = conv_fig_tsp
+            if len(results_tsp_only) > 1:
+                perf_fig_tsp = PSOVisualizer.plot_performance_comparison(results_tsp_only)
+                # 更新性能比较图的标题
+                perf_fig_tsp.suptitle('PSO Performance Comparison (TSP only)', fontsize=16)
+                plot_figs["performance_comparison_tsp_only"] = perf_fig_tsp
+        else:
+            print("No TSP results to generate TSP-only comparison plots.")
+
+        # 2. 仅 ATSP 结果的比较图
+        if results_atsp_only:
+            print("\nGenerating comparison visualizations for ATSP results only...")
+            if len(results_atsp_only) > 0:
+                conv_fig_atsp = PSOVisualizer.plot_convergence(results_atsp_only, title="PSO Convergence Comparison (ATSP only)")
+                plot_figs["convergence_comparison_atsp_only"] = conv_fig_atsp
+            if len(results_atsp_only) > 1:
+                perf_fig_atsp = PSOVisualizer.plot_performance_comparison(results_atsp_only)
+                # 更新性能比较图的标题
+                perf_fig_atsp.suptitle('PSO Performance Comparison (ATSP only)', fontsize=16)
+                plot_figs["performance_comparison_atsp_only"] = perf_fig_atsp
+        else:
+            print("No ATSP results to generate ATSP-only comparison plots.")
+
+        # 3. 所有结果的比较图 (如果同时有TSP和ATSP结果，或者用户选择了运行多种类型的算法)
+        # 仅当结果集中同时包含TSP和ATSP，或者运行了多种基础/增强算法时，这个“全部”才有意义
+        # 或者，如果用户明确运行了 'all' 类型的实验，也应显示
+        should_plot_all_comparison = len(results) > 1 and (len(results_tsp_only) > 0 and len(results_atsp_only) > 0 or len(results) > len(results_tsp_only) or len(results) > len(results_atsp_only))
+        if args.pso_type == 'all': # 如果用户指定了 'all'，则总是绘制总的比较图
+            should_plot_all_comparison = True
+
+        if should_plot_all_comparison and len(results) > 0 : # 确保至少有一个结果
+             print("\nGenerating comparison visualizations for ALL combined results...")
+             conv_fig_all = PSOVisualizer.plot_convergence(results, title="PSO Algorithm Convergence Comparison (All Results)")
+             plot_figs["convergence_comparison_all_results"] = conv_fig_all
+             if len(results) > 1:
+                perf_fig_all = PSOVisualizer.plot_performance_comparison(results)
+                # 更新性能比较图的标题
+                perf_fig_all.suptitle('PSO Performance Comparison (All Results)', fontsize=16)
+                plot_figs["performance_comparison_all_results"] = perf_fig_all
+        elif len(results_tsp_only) <=1 and len(results_atsp_only) <=1 and len(results) > 0 : # 如果只有单个TSP或ATSP实验，则总图无意义
+            pass #单个实验的结果已经在TSP-only或ATSP-only中绘制（如果适用）
+        elif len(results) > 0 and not results_tsp_only and not results_atsp_only:
+            # 处理一些边缘情况，比如运行的算法名称不包含(TSP)或(ATSP)
+             print("\nGenerating comparison visualizations for ALL collected results (generic)...")
+             conv_fig_all = PSOVisualizer.plot_convergence(results, title="PSO Algorithm Convergence Comparison (Collected)")
+             plot_figs["convergence_comparison_collected"] = conv_fig_all
+             if len(results) > 1:
+                perf_fig_all = PSOVisualizer.plot_performance_comparison(results)
+                perf_fig_all.suptitle('PSO Performance Comparison (Collected)', fontsize=16)
+                plot_figs["performance_comparison_collected"] = perf_fig_all
 
 
-    # --- Handle Plot Saving and Showing ---
     if plot_figs:
         for fig_name, fig_object in plot_figs.items():
             if args.save_plots:
-                save_path = os.path.join(args.output_dir, f"{fig_name.replace(' ', '_')}.png")
+                save_path = os.path.join(args.output_dir, f"{fig_name.replace(' ', '_').replace('(', '').replace(')', '')}.png") # 文件名净化
                 try:
                     fig_object.savefig(save_path)
                     print(f"Saved plot: {save_path}")
                 except Exception as e:
                     print(f"Error saving plot {save_path}: {e}")
-            
+
             if args.show_plots:
-                plt.figure(fig_object.number) # Ensure correct figure is active
+                plt.figure(fig_object.number)
                 plt.show()
-            
-            plt.close(fig_object) # Close figure to free memory
-    
+
+            plt.close(fig_object)
+
     print("\nExecution finished!")
 
 
