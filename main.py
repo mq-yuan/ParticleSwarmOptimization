@@ -608,6 +608,18 @@ def main():
         'enhanced_chaos_tsp': {'class': EnhancedPSO, 'problem': tsp_problem,
                                'enhancements': {'enable_local_search': False, 'enable_adaptive_params': False, 'enable_chaos': True},
                                'name': 'Enhanced PSO (Chaos, TSP)'},
+        'enhanced_all_atsp': {'class': EnhancedPSO, 'problem': atsp_problem, 
+                             'enhancements': {'enable_local_search': True, 'enable_adaptive_params': True, 'enable_chaos': True}, 
+                             'name': 'Enhanced PSO (All Features, ATSP)'},
+        'enhanced_ls_atsp': {'class': EnhancedPSO, 'problem': atsp_problem,
+                            'enhancements': {'enable_local_search': True, 'enable_adaptive_params': False, 'enable_chaos': False},
+                            'name': 'Enhanced PSO (Local Search, ATSP)'},
+        'enhanced_adaptive_atsp': {'class': EnhancedPSO, 'problem': atsp_problem,
+                                  'enhancements': {'enable_local_search': False, 'enable_adaptive_params': True, 'enable_chaos': False},
+                                  'name': 'Enhanced PSO (Adaptive Params, ATSP)'},
+        'enhanced_chaos_atsp': {'class': EnhancedPSO, 'problem': atsp_problem,
+                               'enhancements': {'enable_local_search': False, 'enable_adaptive_params': False, 'enable_chaos': True},
+                               'name': 'Enhanced PSO (Chaos, ATSP)'},
     }
 
     # --- Run selected PSO ---
